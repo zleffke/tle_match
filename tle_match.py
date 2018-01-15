@@ -9,13 +9,17 @@ import os
 import sys
 import math
 import ephem
-
 import argparse
+import json
 import datetime as dt
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
 import utilities.pyephem
-import utilities.gr_doppler
 import utilities.satellite
+import utilities.plotting
 #from utilities import *
 
 deg2rad = math.pi / 180
@@ -47,58 +51,69 @@ def main():
 
     meas = parser.add_argument_group('Measurement Related Configurations')
     meas_fp_default = '/'.join([cwd, 'measurements'])
-    meas.add_argument('--dop_file',
-                        dest='dop_file',
+    meas.add_argument('--meas_json',
+                        dest='meas_json',
                         type=str,
-                        default='FOX-1D_USRP_20180113_161106.862011_UTC_50k.dop',
-                        help="Doppler offset measurement file from GNU Radio",
+                        default='DOPPLER_FOX-1D_20180113_161201.862011_UTC_10sps.json',
+                        help="Converted Doppler offset measurement file, JSON format",
                         action="store")
-    meas.add_argument('--dop_folder',
-                        dest='dop_folder',
+    meas.add_argument('--meas_csv',
+                        dest='meas_csv',
+                        type=str,
+                        default='DOPPLER_FOX-1D_20180113_161201.862011_UTC_10sps.csv',
+                        help="Converted Doppler offset measurement file, CSV format",
+                        action="store")
+    meas.add_argument('--meas_md',
+                        dest='meas_md',
+                        type=str,
+                        default='DOPPLER_FOX-1D_20180113_161201.862011_UTC_10sps.md',
+                        help="Measurement metadata file, JSON format",
+                        action="store")
+    meas.add_argument('--meas_folder',
+                        dest='meas_folder',
                         type=str,
                         default=meas_fp_default,
-                        help="Doppler offset measurement file from GNU Radio",
-                        action="store")
-    meas.add_argument('--rx_center_freq',
-                        dest='rx_center_freq',
-                        type=float,
-                        default=145.88e6,
-                        help="Receiver Center Frequency [Hz]",
-                        action="store")
-    meas.add_argument('--gs_lat',
-                        dest='gs_lat',
-                        type=float,
-                        default=37.229976,
-                        help="Ground Station Latitude [deg], N=+, S=-",
-                        action="store")
-    meas.add_argument('--gs_lon',
-                        dest='gs_lon',
-                        type=float,
-                        default=-80.439627,
-                        help="Ground Station Longitude [deg], E=+, W=-",
-                        action="store")
-    meas.add_argument('--gs_alt',
-                        dest='gs_alt',
-                        type=float,
-                        default=610,
-                        help="Ground Station Altitude [m]",
-                        action="store")
-    meas.add_argument('--offset',
-                        dest='offset',
-                        type=float,
-                        default=0,
-                        help="Offset from dop_file start for begining of valid data [seconds]",
+                        help="Converted Doppler offset measurement file location",
                         action="store")
 
+    plot = parser.add_argument_group('Plotting Related Configurations')
+    fig_fp_default = '/'.join([cwd, 'figures'])
+    plot.add_argument('--fig_path',
+                        dest='fig_path',
+                        type=str,
+                        default=fig_fp_default,
+                        help="Folder location for saved figures",
+                        action="store")
+    plot.add_argument('--fig_save',
+                        dest='fig_save',
+                        type=int,
+                        default=0,
+                        help="Save Figure Flag, 0=N, 1=Y",
+                        action="store")
 
 
     args = parser.parse_args()
     #--------END Command Line argument parser------------------------------------------------------
+    import warnings
+    warnings.filterwarnings('ignore')
+    
+    #--Read in Measurement metadata
+    fp_md = '/'.join([args.meas_folder,args.meas_md])
+    if not os.path.isfile(fp_md) == True:
+        print 'ERROR: invalid Measurement Metadata file: {:s}'.format(fp_md)
+        sys.exit()
 
+    print 'Importing measurement metadata from: {:s}'.format(fp_md)
+    with open(fp_md, 'r') as f:
+        md = json.load(f)
+
+    for k in md.keys():
+        print k, md[k]
+    #with open
 
     #--Read in TLE Files--
     tle = utilities.pyephem.tle_file_input(args.tle_folder, args.tle_file)
-    print tle
+    #print tle
 
     #--create list of satellite objects with pyephem--
     sats = [] #list of pyephem satellite objects
@@ -106,17 +121,17 @@ def main():
 
     #--create ground station object with pyephem--
     gs = ephem.Observer()
-    gs.lat, gs.lon, gs.elevation =  args.gs_lat*deg2rad, \
-                                    args.gs_lon*deg2rad, \
-                                    args.gs_alt
+    gs.lat, gs.lon, gs.elevation =  md['gs_lat']*deg2rad, \
+                                    md['gs_lon']*deg2rad, \
+                                    md['gs_alt']
 
     #Read in Doppler Measurement File
-    dop_df = utilities.gr_doppler.Import_Doppler_Data(args.dop_folder, args.dop_file)
-    print dop_df.name
-    print dop_df['timestamp']
-    #Convert to floats (struct pack....)
+    fp_meas = '/'.join([args.meas_folder,args.meas_json])
+    print 'Importing measurement metadata from: {:s}'.format(fp_meas)
+    df = pd.read_json(fp_meas, orient='records')
+    df.name = md['sat_name']
 
-
+    fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
 
 if __name__ == '__main__':
     main()

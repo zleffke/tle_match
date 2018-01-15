@@ -36,7 +36,7 @@ def main():
     meas.add_argument('--meas_file',
                         dest='meas_file',
                         type=str,
-                        default='FOX-1D_USRP_20180113_161106.862011_UTC_50k.f32',
+                        default='FOX-1D_USRP_20180113_161106.862011_UTC_10sps.f32',
                         help="Doppler offset measurement file from GNU Radio",
                         action="store")
     meas.add_argument('--meas_folder',
