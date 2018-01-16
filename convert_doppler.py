@@ -135,9 +135,11 @@ def main():
 
     #--Generate Metadata information
     md = {}
-    md['sat_name'] = file_md['sat_name']
-    md['receiver'] = file_md['receiver']
-    md['rx_center_freq'] = args.rx_center_freq
+    md['sat_name']      = file_md['sat_name']
+    md['receiver']      = file_md['receiver']
+    md['samp_rate_str'] = file_md['samp_rate_str']
+    md['samp_rate']     = file_md['samp_rate']
+    md['rx_center_freq']= args.rx_center_freq
     #print vars(args)
     for key in vars(args).keys(): #cycle through argparser keys
         if 'gs' in key: #for gs items
@@ -164,6 +166,13 @@ def main():
                     index_label ="index", \
                     float_format="%.10f", \
                     date_format='%Y-%m-%dT%H:%M:%S.%fZ')
+
+
+    #fig_cnt = utilities.plotting.plot_offset_idx(0, dop, args.fig_path, args.fig_save)
+
+    #fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
+
+
 
 
 

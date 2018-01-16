@@ -17,9 +17,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-import utilities.pyephem
+
 import utilities.satellite
 import utilities.plotting
+import utilities.poly
 #from utilities import *
 
 deg2rad = math.pi / 180
@@ -33,21 +34,6 @@ def main():
     #--------START Command Line argument parser------------------------------------------------------
     parser = argparse.ArgumentParser(description="TLE Doppler Match",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    tle = parser.add_argument_group('TLE related configurations')
-    tle_fp_default = '/'.join([cwd, 'tle'])
-    tle.add_argument('--tle_file',
-                    dest='tle_file',
-                    type=str,
-                    default='pslv40.tle',
-                    help="TLE File of candidate satellites",
-                    action="store")
-    tle.add_argument('--tle_folder',
-                    dest='tle_folder',
-                    type=str,
-                    default=tle_fp_default,
-                    help="Folder containing TLE file",
-                    action="store")
 
     meas = parser.add_argument_group('Measurement Related Configurations')
     meas_fp_default = '/'.join([cwd, 'measurements'])
@@ -76,6 +62,15 @@ def main():
                         help="Converted Doppler offset measurement file location",
                         action="store")
 
+    gen = parser.add_argument_group('Generated Doppler Related Configurations')
+    gen_fp_default = '/'.join([cwd, 'generated'])
+    gen.add_argument('--gen_folder',
+                        dest='gen_folder',
+                        type=str,
+                        default=gen_fp_default,
+                        help="Generated Doppler measurement file location",
+                        action="store")
+
     plot = parser.add_argument_group('Plotting Related Configurations')
     fig_fp_default = '/'.join([cwd, 'figures'])
     plot.add_argument('--fig_path',
@@ -96,7 +91,7 @@ def main():
     #--------END Command Line argument parser------------------------------------------------------
     import warnings
     warnings.filterwarnings('ignore')
-    
+
     #--Read in Measurement metadata
     fp_md = '/'.join([args.meas_folder,args.meas_md])
     if not os.path.isfile(fp_md) == True:
@@ -109,21 +104,6 @@ def main():
 
     for k in md.keys():
         print k, md[k]
-    #with open
-
-    #--Read in TLE Files--
-    tle = utilities.pyephem.tle_file_input(args.tle_folder, args.tle_file)
-    #print tle
-
-    #--create list of satellite objects with pyephem--
-    sats = [] #list of pyephem satellite objects
-    for sat in tle.keys(): sats.append(ephem.readtle(sat, tle[sat]['line1'], tle[sat]['line2']))
-
-    #--create ground station object with pyephem--
-    gs = ephem.Observer()
-    gs.lat, gs.lon, gs.elevation =  md['gs_lat']*deg2rad, \
-                                    md['gs_lon']*deg2rad, \
-                                    md['gs_alt']
 
     #Read in Doppler Measurement File
     fp_meas = '/'.join([args.meas_folder,args.meas_json])
@@ -131,7 +111,31 @@ def main():
     df = pd.read_json(fp_meas, orient='records')
     df.name = md['sat_name']
 
-    fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
+    #Read in Generated Doppler Files
+    gen_files = utilities.poly.Find_File_Names(args.gen_folder)
+    gen_files = [ x for x in gen_files if ".csv" not in x ]
+
+    dop_df = [] #list containing doppler data, might not be needed
+    dop_df.append(df)
+    for gen_f in gen_files:
+        #print gen_f
+        fp_gen = '/'.join([args.gen_folder,gen_f])
+        if os.path.isfile(fp_gen) == True:
+            print 'Importing generated doppler data from: {:s}'.format(fp_gen)
+            dop_df.append(pd.read_json(fp_gen, orient='records'))
+            dop_df[-1].name = gen_f.split('_')[1]
+        else:
+            'ERROR: invalid generated doppler file: {:s}'.format(fp_gen)
+
+    utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
+
+    #fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
+
+
+
+
+
+
 
 if __name__ == '__main__':
     main()
