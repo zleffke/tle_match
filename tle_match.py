@@ -127,8 +127,8 @@ def main():
         else:
             'ERROR: invalid generated doppler file: {:s}'.format(fp_gen)
 
-    utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
-
+    #utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
+    utilities.poly.Doppler_Regression(df)
     #fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
 
 

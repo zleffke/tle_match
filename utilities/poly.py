@@ -101,18 +101,22 @@ def findBestFit(time_stamps, offsets, reg_x):
     #os.system('clear')
     return results
 
-def Doppler_Regression(options):
-    # Input Files:
-    time_stamps = []
-    offsets     = []
 
+def Doppler_Regression(df):
+    # Input Files:
+    #time_stamps = [dt.datetime.utcfromtimestamp(element*1e-9) for element in df['timestamp'].values.tolist()]
+
+    #offsets = df['doppler_offset'].values.tolist()
+    #print time_stamps
     # Read input Measurement Data Files
-    file_input(time_stamps, offsets, options.filename)
-    reg_x = np.arange(time_stamps[0], time_stamps[len(time_stamps)-1], 0.05)
+    #file_input(time_stamps, offsets, options.filename)
+    #reg_x = np.arange(time_stamps[0], time_stamps[len(time_stamps)-1], 0.05)
+    #print df['timestamp'].iloc[0], df['timestamp'].iloc[-1]
+    reg_x = np.arange(df['timestamp'].iloc[0], df['timestamp'].iloc[-1], 0.05)
 
     #Find Best Polyfit
-    pf = findBestFit(time_stamps, offsets, reg_x)
-
+    #pf = findBestFit(time_stamps, offsets, reg_x)
+    pf = findBestFit(df['timestamp'], df['doppler_offset'], reg_x)
     #Take Derivatives of polyfit data to find inflection point
     pd_reg = polydiff(reg_x, pf['polynomial'])
     reg_idx = pd_reg['min_idx']

@@ -16,6 +16,11 @@ import ephem
 import datetime as dt
 import pandas as pd
 
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import *
+
+
 deg2rad = math.pi / 180
 rad2deg = 180 / math.pi
 c       = float(299792458)    #[m/s], speed of light
