@@ -110,6 +110,7 @@ def main():
     print 'Importing measurement metadata from: {:s}'.format(fp_meas)
     df = pd.read_json(fp_meas, orient='records')
     df.name = md['sat_name']
+    df['dop_norm'] = df['doppler_offset'] / md['rx_center_freq']
 
     #Read in Generated Doppler Files
     gen_files = utilities.poly.Find_File_Names(args.gen_folder)
@@ -124,11 +125,17 @@ def main():
             print 'Importing generated doppler data from: {:s}'.format(fp_gen)
             dop_df.append(pd.read_json(fp_gen, orient='records'))
             dop_df[-1].name = gen_f.split('_')[1]
+            dop_df[-1]['dop_norm'] = dop_df[-1]['doppler_offset'] / md['rx_center_freq']
+            #print dop_df
         else:
             'ERROR: invalid generated doppler file: {:s}'.format(fp_gen)
 
-    #utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
-    utilities.poly.Doppler_Regression(df)
+    print md['rx_center_freq']
+
+
+    utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
+    #utilities.poly.Doppler_Regression(df)
+    utilities.poly.Doppler_Regression(dop_df[0])
     #fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
 
 

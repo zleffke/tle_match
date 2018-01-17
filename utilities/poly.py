@@ -104,21 +104,43 @@ def findBestFit(time_stamps, offsets, reg_x):
 
 def Doppler_Regression(df):
     # Input Files:
-    #time_stamps = [dt.datetime.utcfromtimestamp(element*1e-9) for element in df['timestamp'].values.tolist()]
+    #timestamp = [dt.datetime.utcfromtimestamp(element*1e-9) for element in df['timestamp'].values.tolist()]
+    timestamp = [(np.datetime64(element, 'ns').astype('uint64')/1e6).astype('uint32') for element in df['timestamp'].values.tolist()]
+    print timestamp[0]
+    print timestamp[-1]
+    #return
+    #print len(df['timestamp'].values.tolist())
 
+    #start = np.datetime64(df['timestamp'].iloc[0])
+    #stop = np.datetime64(df['timestamp'].iloc[-1])
+    #print start, np.int64(start), type(start)
+    #print start, np.int64(stop), type(stop)
     #offsets = df['doppler_offset'].values.tolist()
     #print time_stamps
     # Read input Measurement Data Files
     #file_input(time_stamps, offsets, options.filename)
     #reg_x = np.arange(time_stamps[0], time_stamps[len(time_stamps)-1], 0.05)
     #print df['timestamp'].iloc[0], df['timestamp'].iloc[-1]
-    reg_x = np.arange(df['timestamp'].iloc[0], df['timestamp'].iloc[-1], 0.05)
+    #reg_x = np.arange(df['timestamp'].iloc[0], df['timestamp'].iloc[-1], 0.05)
+    #reg_x = np.arange(np.int64(start), np.int64(stop), 100000)
+    #reg_x = np.arange(timestamp[0], timestamp[-1]+1,1)
+    reg_x = np.arange(df.index.values.tolist()[0], df.index.values.tolist()[-1]+1,.5)
+    print len(reg_x), reg_x[0], reg_x[-1]
+
 
     #Find Best Polyfit
     #pf = findBestFit(time_stamps, offsets, reg_x)
-    pf = findBestFit(df['timestamp'], df['doppler_offset'], reg_x)
+    #pf = findBestFit(timestamp, df['doppler_offset'], reg_x)
+    #pf = findBestFit(timestamp, df['dop_norm'], reg_x)
+    #pf = polyfit(timestamp, df['doppler_offset'].values.tolist(), reg_x, 3)
+    pf = polyfit(df.index.values.tolist(), df['doppler_offset'].values.tolist(), reg_x, 3)
+    #pf = polyfit(timestamp, df['dop_norm'].values.tolist(), reg_x, 3)
+    for k in pf.keys():
+        print k, pf[k]
     #Take Derivatives of polyfit data to find inflection point
     pd_reg = polydiff(reg_x, pf['polynomial'])
+    for k in pd_reg.keys():
+        print k, pd_reg[k]
     reg_idx = pd_reg['min_idx']
 
     print "               Order of Polynomial with best fit: ", pf['degree']
@@ -126,7 +148,9 @@ def Doppler_Regression(df):
     print "      Time Stamp of Inflection Point, Regression: ", reg_x[reg_idx]
     print "Frequency Offset at Inflection Point, Regression: ", pf['equation'][reg_idx]
 
-    plt.plot(time_stamps, offsets, '.') #plot original data
+    #plt.plot(timestamp, df['doppler_offset'], '.') #plot original data
+    plt.plot(df.index.values.tolist(), df['doppler_offset'], '.') #plot original data
+    #plt.plot(timestamp, df['dop_norm'], '.') #plot original data
     plt.plot(reg_x, pf['equation'], 'r-') #plot regression curve
     plt.plot(reg_x, pd_reg['equation'], 'g-') #plot derivative curve
     plt.plot(reg_x[reg_idx], pf['equation'][reg_idx], 'r+', markersize=20) #plot PCA marker
@@ -134,9 +158,9 @@ def Doppler_Regression(df):
     plt.text(reg_x[reg_idx]+20, pf['equation'][reg_idx]+100, label)
     plt.xlabel('Time (s)')
     plt.ylabel('Doppler Offset [Hz]')
-    data = options.filename.split('_')
-    f_actual = 145.98e6 + pf['equation'][reg_idx]
+    #data = options.filename.split('_')
+    f_actual = 145.88e6 + pf['equation'][reg_idx]
     f_str = (str(f_actual / 1e6))[0:10]
-    plt.title('AO-85 Doppler Shift, ' + str(data[1]) + '_' + str(data[2]) + '_' + str(data[3]) + '\n$f_{nom}$= 145.980 [MHz], $f_{actual}$= '+f_str+' [MHz]')
+    plt.title('AO-92 Doppler Shift, ' + '\n$f_{nom}$= 145.880 [MHz], $f_{actual}$= '+f_str+' [MHz]')
     plt.grid()
     plt.show()
