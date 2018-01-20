@@ -161,6 +161,7 @@ def Doppler_Regression(df):
     #data = options.filename.split('_')
     f_actual = 145.88e6 + pf['equation'][reg_idx]
     f_str = (str(f_actual / 1e6))[0:10]
-    plt.title('AO-92 Doppler Shift, ' + '\n$f_{nom}$= 145.880 [MHz], $f_{actual}$= '+f_str+' [MHz]')
+    plt.title('{:s} Doppler Shift, '.format(df.name) + \
+              '\n$f_{nom}$= 145.880 [MHz], $f_{actual}$= '+f_str+' [MHz]')
     plt.grid()
-    plt.show()
+    #plt.show()

@@ -133,9 +133,10 @@ def main():
     print md['rx_center_freq']
 
 
-    utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
+    #utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
     #utilities.poly.Doppler_Regression(df)
-    utilities.poly.Doppler_Regression(dop_df[0])
+    for dop in dop_df:
+        utilities.poly.Doppler_Regression(dop)
     #fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
 
 
