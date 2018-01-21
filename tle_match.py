@@ -135,10 +135,14 @@ def main():
 
     #utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
     #utilities.poly.Doppler_Regression(df)
+    poly_data = []
     for dop in dop_df:
-        utilities.poly.Doppler_Regression(dop)
+        dop_poly = {}
+        dop_poly['name'] = dop.name
+        dop_poly['pf'] = utilities.poly.Doppler_Poly_Regression_idx(dop,2.0)
+        poly_data.append(dop_poly)
     #fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
-
+    #print json.dumps(poly_data, indent=4)
 
 
 

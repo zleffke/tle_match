@@ -102,12 +102,57 @@ def findBestFit(time_stamps, offsets, reg_x):
     return results
 
 
-def Doppler_Regression(df):
+def Doppler_Poly_Regression_idx(df, interp=1):
+    #3rd order polynomail regression of doppler data
+    #df = dataframe containing 'offset' field.
+    #interp is the value to interpolate between data points.
+
+    #Returns polyfit data
+
+    #time step between data points
+    t_step_data = (df['timestamp'][1] - df['timestamp'][0]).total_seconds()
+
+    #time step between regression points
+    t_step_reg = t_step_data/interp
+
+    #generate regression x axis
+    reg_x = np.arange(df.index.values.tolist()[0], df.index.values.tolist()[-1]+1,1/interp)
+
+    #do the polyfit
+    pf = polyfit(df.index.values.tolist(), df['doppler_offset'].values.tolist(), reg_x, 3)
+
+    #differentiate the regression to find TCA idx
+    pd_reg = polydiff(reg_x, pf['polynomial'])
+    pf['tca_idx'] = pd_reg['min_idx']
+
+    data_idx = pf['tca_idx']//interp #quotient, no remainder
+    reg_rem = pf['tca_idx']%interp*t_step_reg #remainder
+
+    #grab timestamp, increment with timedelta to account for interpolation
+    pf['tca_utc'] = df['timestamp'][data_idx] + dt.timedelta(seconds=reg_rem)
+
+    #print results
+    print "         Coefficient of Determination, R-Squared: ", pf['determination']
+    print "      Time Stamp of Inflection Point, Regression: ", pf['tca_idx']
+    print "Frequency Offset at Inflection Point, Regression: ", pf['equation'][pf['tca_idx']]
+    print "    Time Stamp of Inflection Point, Interpolated: ", pf['tca_utc']
+
+    #pf_prime is a hack.  Don't need 'equation' in returned data in this function
+    #but too lazy to change other functions
+    pf_prime = {}
+    for k in pf.keys():
+        if k != 'equation': pf_prime[k] = pf[k]
+    return pf_prime
+
+
+
+
+def Doppler_Regression_old(df):
     # Input Files:
     #timestamp = [dt.datetime.utcfromtimestamp(element*1e-9) for element in df['timestamp'].values.tolist()]
     timestamp = [(np.datetime64(element, 'ns').astype('uint64')/1e6).astype('uint32') for element in df['timestamp'].values.tolist()]
-    print timestamp[0]
-    print timestamp[-1]
+    #print timestamp[0]
+    #print timestamp[-1]
     #return
     #print len(df['timestamp'].values.tolist())
 
@@ -125,7 +170,7 @@ def Doppler_Regression(df):
     #reg_x = np.arange(np.int64(start), np.int64(stop), 100000)
     #reg_x = np.arange(timestamp[0], timestamp[-1]+1,1)
     reg_x = np.arange(df.index.values.tolist()[0], df.index.values.tolist()[-1]+1,.5)
-    print len(reg_x), reg_x[0], reg_x[-1]
+    #print len(reg_x), reg_x[0], reg_x[-1]
 
 
     #Find Best Polyfit
@@ -141,13 +186,14 @@ def Doppler_Regression(df):
     pd_reg = polydiff(reg_x, pf['polynomial'])
     for k in pd_reg.keys():
         print k, pd_reg[k]
-    reg_idx = pd_reg['min_idx']
+    pf['tca_idx'] = pd_reg['min_idx']
 
     print "               Order of Polynomial with best fit: ", pf['degree']
     print "         Coefficient of Determination, R-Squared: ", pf['determination']
-    print "      Time Stamp of Inflection Point, Regression: ", reg_x[reg_idx]
-    print "Frequency Offset at Inflection Point, Regression: ", pf['equation'][reg_idx]
+    print "      Time Stamp of Inflection Point, Regression: ", pf['tca_idx']
+    print "Frequency Offset at Inflection Point, Regression: ", pf['equation'][pf['tca_idx']]
 
+    return pf
     #plt.plot(timestamp, df['doppler_offset'], '.') #plot original data
     plt.plot(df.index.values.tolist(), df['doppler_offset'], '.') #plot original data
     #plt.plot(timestamp, df['dop_norm'], '.') #plot original data
@@ -164,4 +210,4 @@ def Doppler_Regression(df):
     plt.title('{:s} Doppler Shift, '.format(df.name) + \
               '\n$f_{nom}$= 145.880 [MHz], $f_{actual}$= '+f_str+' [MHz]')
     plt.grid()
-    #plt.show()
+    plt.show()
