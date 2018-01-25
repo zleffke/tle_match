@@ -133,7 +133,7 @@ def Doppler_Poly_Regression_idx(df, interp=1):
 
     #print results
     print "         Coefficient of Determination, R-Squared: ", pf['determination']
-    print "      Time Stamp of Inflection Point, Regression: ", pf['tca_idx']
+    print "           Index of Inflection Point, Regression: ", pf['tca_idx']
     print "Frequency Offset at Inflection Point, Regression: ", pf['equation'][pf['tca_idx']]
     print "    Time Stamp of Inflection Point, Interpolated: ", pf['tca_utc']
 
