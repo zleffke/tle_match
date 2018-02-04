@@ -104,9 +104,8 @@ def findBestFit(time_stamps, offsets, reg_x):
 
 def Doppler_Poly_Regression_idx(df, interp=1):
     #3rd order polynomail regression of doppler data
-    #df = dataframe containing 'offset' field.
+    #df = dataframe containing 'doppler_offset' field.
     #interp is the value to interpolate between data points.
-
     #Returns polyfit data
 
     #time step between data points
@@ -120,7 +119,7 @@ def Doppler_Poly_Regression_idx(df, interp=1):
 
     #do the polyfit
     pf = polyfit(df.index.values.tolist(), df['doppler_offset'].values.tolist(), reg_x, 3)
-
+    pf['len_reg_x'] = len(reg_x)
     #differentiate the regression to find TCA idx
     pd_reg = polydiff(reg_x, pf['polynomial'])
     pf['tca_idx'] = pd_reg['min_idx']
@@ -133,7 +132,7 @@ def Doppler_Poly_Regression_idx(df, interp=1):
 
     #print results
     print "         Coefficient of Determination, R-Squared: ", pf['determination']
-    print "           Index of Inflection Point, Regression: ", pf['tca_idx']
+    print "      Time Stamp of Inflection Point, Regression: ", pf['tca_idx']
     print "Frequency Offset at Inflection Point, Regression: ", pf['equation'][pf['tca_idx']]
     print "    Time Stamp of Inflection Point, Interpolated: ", pf['tca_utc']
 

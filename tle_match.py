@@ -26,6 +26,13 @@ import utilities.poly
 deg2rad = math.pi / 180
 rad2deg = 180 / math.pi
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, dt.datetime):
+        return obj.__str__()
+    raise TypeError ("Type %s not serializable" % type(obj))
+
 def main():
     """ Main entry point """
     os.system('reset')
@@ -35,40 +42,12 @@ def main():
     parser = argparse.ArgumentParser(description="TLE Doppler Match",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    meas = parser.add_argument_group('Measurement Related Configurations')
-    meas_fp_default = '/'.join([cwd, 'measurements'])
-    meas.add_argument('--meas_json',
-                        dest='meas_json',
-                        type=str,
-                        default='DOPPLER_FOX-1D_20180113_161201.862011_UTC_10sps.json',
-                        help="Converted Doppler offset measurement file, JSON format",
-                        action="store")
-    meas.add_argument('--meas_csv',
-                        dest='meas_csv',
-                        type=str,
-                        default='DOPPLER_FOX-1D_20180113_161201.862011_UTC_10sps.csv',
-                        help="Converted Doppler offset measurement file, CSV format",
-                        action="store")
-    meas.add_argument('--meas_md',
-                        dest='meas_md',
-                        type=str,
-                        default='DOPPLER_FOX-1D_20180113_161201.862011_UTC_10sps.md',
-                        help="Measurement metadata file, JSON format",
-                        action="store")
-    meas.add_argument('--meas_folder',
-                        dest='meas_folder',
-                        type=str,
-                        default=meas_fp_default,
-                        help="Converted Doppler offset measurement file location",
-                        action="store")
 
-    gen = parser.add_argument_group('Generated Doppler Related Configurations')
-    gen_fp_default = '/'.join([cwd, 'generated'])
-    gen.add_argument('--gen_folder',
-                        dest='gen_folder',
+    parser.add_argument('--pd_file',
+                        dest='pd_file',
                         type=str,
-                        default=gen_fp_default,
-                        help="Generated Doppler measurement file location",
+                        default='FOX-1D.json',
+                        help="Polynomial Data JSON File",
                         action="store")
 
     plot = parser.add_argument_group('Plotting Related Configurations')
@@ -86,67 +65,54 @@ def main():
                         help="Save Figure Flag, 0=N, 1=Y",
                         action="store")
 
-
     args = parser.parse_args()
     #--------END Command Line argument parser------------------------------------------------------
     import warnings
     warnings.filterwarnings('ignore')
 
-    #--Read in Measurement metadata
-    fp_md = '/'.join([args.meas_folder,args.meas_md])
-    if not os.path.isfile(fp_md) == True:
-        print 'ERROR: invalid Measurement Metadata file: {:s}'.format(fp_md)
+    #--Read in polynomial data
+
+    if not os.path.isfile(args.pd_file) == True:
+        print 'ERROR: invalid Measurement Metadata file: {:s}'.format(args.pd_file)
         sys.exit()
 
-    print 'Importing measurement metadata from: {:s}'.format(fp_md)
-    with open(fp_md, 'r') as f:
-        md = json.load(f)
-
-    for k in md.keys():
-        print k, md[k]
-
-    #Read in Doppler Measurement File
-    fp_meas = '/'.join([args.meas_folder,args.meas_json])
-    print 'Importing measurement metadata from: {:s}'.format(fp_meas)
-    df = pd.read_json(fp_meas, orient='records')
-    df.name = md['sat_name']
-    df['dop_norm'] = df['doppler_offset'] / md['rx_center_freq']
-
-    #Read in Generated Doppler Files
-    gen_files = utilities.poly.Find_File_Names(args.gen_folder)
-    gen_files = [ x for x in gen_files if ".csv" not in x ]
-
-    dop_df = [] #list containing doppler data, might not be needed
-    dop_df.append(df)
-    for gen_f in gen_files:
-        #print gen_f
-        fp_gen = '/'.join([args.gen_folder,gen_f])
-        if os.path.isfile(fp_gen) == True:
-            print 'Importing generated doppler data from: {:s}'.format(fp_gen)
-            dop_df.append(pd.read_json(fp_gen, orient='records'))
-            dop_df[-1].name = gen_f.split('_')[1]
-            dop_df[-1]['dop_norm'] = dop_df[-1]['doppler_offset'] / md['rx_center_freq']
-            #print dop_df
-        else:
-            'ERROR: invalid generated doppler file: {:s}'.format(fp_gen)
-
-    print md['rx_center_freq']
+    print 'Importing measurement metadata from: {:s}'.format(args.pd_file)
+    with open(args.pd_file, 'r') as f:
+        poly_data = json.load(f)
 
 
-    #utilities.plotting.plot_multi_doppler_ts(0,dop_df, args.fig_path, args.fig_save)
-    #utilities.poly.Doppler_Regression(df)
-    poly_data = []
-    for dop in dop_df:
-        dop_poly = {}
-        dop_poly['name'] = dop.name
-        dop_poly['pf'] = utilities.poly.Doppler_Poly_Regression_idx(dop,2.0)
-        poly_data.append(dop_poly)
-    #fig_cnt = utilities.plotting.plot_offset(0, df, args.fig_path, args.fig_save)
-    #print json.dumps(poly_data, indent=4)
+    reg_x = np.arange(0,5000)
+    for idx, pd in enumerate(poly_data):
+        #print pd['pf']['polynomial']
+        ts_format = "%Y-%m-%d %H:%M:%S.%f"
+        pd['pf']['tca_utc'] = dt.datetime.strptime(pd['pf']['tca_utc'],ts_format)
+        reg_x = np.arange(0,pd['pf']['len_reg_x'])
+        pd['pf']['equation'] = np.polyval(pd['pf']['polynomial'], reg_x)
+        #print pd['pf']['equation']
 
 
+    print len(poly_data)
+    meas_sat = poly_data.pop(0)
+    print len(poly_data)
+    print meas_sat['name']
+    for idx, pd in enumerate(poly_data):
+        tca_delta = (meas_sat['pf']['tca_utc']-pd['pf']['tca_utc']).total_seconds()
+        pd['tca_delta'] = tca_delta
+        print pd['tca_delta']
+        #fig_idx = utilities.plotting.plot_2poly_ts(0, reg_x, \
+        #                                        meas_sat, \
+        #                                        pd, \
+        #                                        args.fig_path,0)
 
-
+    tle_match = None
+    last_delta = 1e6
+    for idx, pd in enumerate(poly_data):
+        if abs(pd['tca_delta']) < last_delta:
+            last_delta = abs(pd['tca_delta'])
+            tle_match = pd
+    print tle_match['tca_delta']
+    print 'Matching Satellite for {:s} is: {:s}'.format(meas_sat['name'], tle_match['name'])
+    print 'TCA Delta of matching satellite [s]: {:3.3f}'.format(tle_match['tca_delta'])
 
 
 if __name__ == '__main__':
